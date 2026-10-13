@@ -7,6 +7,9 @@ permissions:
 jobs:
   english:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['18', '22']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -14,7 +17,7 @@ jobs:
           python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node }}
       - run: python -m pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
       - run: node --test tests/*.test.mjs

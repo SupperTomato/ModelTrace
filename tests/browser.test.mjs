@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { webcrypto } from 'node:crypto';
+// Supply the browser API on Node versions without a global Web Crypto object.
+globalThis.crypto ??= webcrypto;
 // Import browser-native ES module without depending on Node's .js module detection.
 const source = await readFile(new URL('../static/challenge-browser.js', import.meta.url), 'utf8');
 const { generateChallenges } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
