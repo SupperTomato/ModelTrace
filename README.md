@@ -1,76 +1,78 @@
-# ModelTrace
+# ModelTrace (English)
 
-ModelTrace 是一个本地运行的主动模型归因工具。它通过三条独立的长整数生成挑战提取输出指纹，在统一候选库中自动判断模型家族和具体版本。
+An English edition of [xqy2006/ModelTrace](https://github.com/xqy2006/ModelTrace), a local model fingerprint attribution tool. Three independent integer-generation challenges produce output fingerprints that are compared with a unified reference bank to rank model families and versions.
 
-## 运行
+The web interface, generated challenges, API messages, ModelTrace Guard plugin, and documentation are in English. The upstream author is xqy2006; this fork maintains the English conversion.
 
-```powershell
+## Run locally
+
+Requires Python 3.10 or later.
+
+```sh
+python -m venv .venv
+# Linux/macOS:
+. .venv/bin/activate
+# Windows PowerShell instead:
+# .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python start.py
 ```
 
-页面地址为 `http://127.0.0.1:7860/`。
+Open `http://127.0.0.1:7860/`.
 
 ## GitHub Pages
 
-`static/index.html` 是不依赖后端的手动测试版本，归因计算和指纹库读取都在浏览器本地完成。仓库附带的 GitHub Actions 会将 `static/` 部署到 GitHub Pages。
+The [browser-only edition](https://suppertomato.github.io/ModelTrace/) supports manual tests without a backend. Challenge generation, fingerprint bank loading, and scoring run locally in the browser. The included GitHub Actions workflow deploys `static/` to GitHub Pages.
 
-## 使用
+To serve it locally from the repository root:
 
-- **手动测试**：复制三条挑战，分别发送给同一个待测模型，再粘贴每次完整输出。
-- **API 自动测试**：填写 Base URL、API Key 和模型名。程序会自动尝试 OpenAI Chat Completions 与 Anthropic Messages 格式，以三份有效回答为目标完成归因。
-- **指纹库管理**：可以新建指纹库，或通过 API 为现有指纹库添加模型指纹。
+```sh
+python -m http.server 7860 --directory static
+```
 
-API Key 只用于当前页面发起请求，不写入磁盘。
-自动采集会在对应的 `*_reference.jsonl` 中保存实际 user prompt、base prompt、system prompt 和 user prefix；拟合后的 `*_bank.json` 与 `unified_bank.json` 只保存统计指纹和校准参数。
+Open `http://127.0.0.1:7860/`. API testing and fingerprint collection require the Python app.
 
-## 指纹方法
+## Use
 
-### Codex 任务内监测插件
+- **Manual testing:** Copy the three challenges, send each separately to the same model, and paste each complete response.
+- **Automatic API testing:** Supply the base URL, API key, and model name. The app tries OpenAI Chat Completions and Anthropic Messages formats and aims to collect three usable responses.
+- **Fingerprint management:** Create a bank or collect fingerprints for additional models through an API.
 
-[ModelTrace Guard](codex-plugin/modeltrace-guard/README.md) 按工具调用次数，在后台从原 Codex 任务的冻结快照分别 fork 进行普通检测和异常复测，测后清理临时分支。正常结果静默保存，主任务无需等待检测。用户可调整工具间隔、复测次数（默认 3）、有效期和十种语言，不设每轮或任务累计探针上限。网页仪表盘提供完整历史分页和实时提醒；首次不一致要求智能体告知并暂停工作，额外复测全部不一致时停止原任务并拦截后续受支持的工作工具。探针由 Codex 自身生成并消耗对应推理额度，评分使用插件附带的 ModelTrace 指纹库，页面刷新不消耗模型额度。
+API keys are used for requests from the current page and are not written to disk. Collection stores the actual user prompt, base prompt, system prompt, and user prefix in the corresponding `*_reference.jsonl`. Fitted `*_bank.json` and `unified_bank.json` files store statistical fingerprints and calibration parameters.
 
-安装后在 Codex CLI 的 `/hooks` 中审阅并信任插件 hooks，再在目标任务中开启监测。安装、配置和结果解释详见[插件使用说明](codex-plugin/modeltrace-guard/README.md)。
+## ModelTrace Guard for Codex
 
-### 核心算法
+[ModelTrace Guard](codex-plugin/modeltrace-guard/README.md) monitors a Codex task at configurable work-tool intervals. It generates English probes in disposable forks of frozen task snapshots, scores them locally, and cleans up temporary branches. Normal results are saved silently; original work does not wait for normal probes.
 
-所有模型使用同一个全局特征空间、同一套特征与权重：
+Configure the tool interval, additional mismatch retries (default 3), and submission deadline. There are no per-turn or task-total probe limits. The dashboard provides paginated history and live alerts. An initial mismatch requires notification and a pause; if all additional retries mismatch, the task must stop and supported subsequent work tools are blocked. Probe generation uses the configured Codex account and consumes inference quota. Refreshing the dashboard does not call a model.
+
+Installation does not enable monitoring. Review and trust the plugin hooks in the Codex CLI's `/hooks`, then enable monitoring in the intended task. See the [plugin guide](codex-plugin/modeltrace-guard/README.md) for installation, configuration, and interpretation.
+
+## Fingerprint method
+
+Every model uses the same global feature space, features, and weights:
 
 ```text
-0.75 × 去除环境方向后的 Hellinger 模型中心相似度
-+ 0.25 × 有序块数字序列特征
+0.75 × Hellinger centroid similarity after removing environment directions
++ 0.25 × ordered-block numerical sequence features
 ```
 
-建库时使用共享环境的平均偏移估计主要干扰方向。归因时先从数字分布和有序特征中投影掉这些方向，再同时与全部模型中心比较。三份回答分别评分后取平均，并使用与查询数量对应的校准温度转换为概率。
+Bank construction estimates nuisance directions from average offsets across shared environments. Attribution projects those directions out of the numerical distribution and ordered features, then compares against all model centroids. The three responses are scored separately and averaged. A query-count-specific calibrated temperature converts scores to closed-set weights.
 
-具体模型概率由一次全局 softmax 得到，家族概率是该家族下各模型概率之和：
+One global softmax gives model weights; family weights sum their member model weights:
 
 ```text
-P(具体模型) = softmax(β × 全局模型得分)
-P(模型家族) = Σ P(该家族中的具体模型)
+P(model) = softmax(beta × global model score)
+P(family) = sum of P(model) for that family's models
 ```
 
-结果是当前候选库内、均匀先验下的闭集概率。未收录模型仍会被归到最相似的现有候选。
+These weights assume a uniform prior over the current bank. An unlisted model is still assigned to the closest listed candidate.
 
-## 项目结构
+## Reference data and English localization
+
+The supplied bank contains two families and 18 model labels:
 
 ```text
-app.py              Web 接口
-fingerprint.py      指纹提取与归因
-bank_builder.py     指纹库构建与概率校准
-challenge_suite.py  自动建库挑战
-enrollment.py       API 调用与指纹采集
-rebuild_unified_bank.py  重建统一全局库
-data/               参考数据与指纹库
-static/             页面资源
-templates/          页面模板
-```
-
-## 指纹库说明
-
-项目中现有指纹库共包含两个模型家族、18 个模型：
-
-```
 gpt-5.4
 gpt-5.5
 gpt-5.6-luna
@@ -91,20 +93,46 @@ claude-opus-5
 claude-opus-5-5
 ```
 
-GPT 采集自官方订阅 Codex，Claude 采集自 [OAIPro](https://api.oaipro.com/)。
+According to the upstream collection metadata, GPT samples were collected through a Codex subscription and Claude samples through [OAIPro](https://api.oaipro.com/). These are reference labels, not independent verification of provider routing or current model availability.
 
-## 声明
+Historical non-English prompt metadata and response explanations are translated to English. Each changed field has `localization` metadata identifying its source language, source SHA-256, and representation. These records are translations of historical collection, **not newly collected English samples**. Original fields are available in the upstream Git history at the revision recorded in [data/localization.json](data/localization.json).
 
-测试结果仅供参考，并非判断模型的决定性证据
+Every parsed numeric sequence and all fitted banks are preserved. The localization manifest records bank hashes and sequence hashes; tests check them. New English prompts preserve the count, range, and direct-generation constraints, but language can affect output distributions. This fork does not claim independent recalibration or an accuracy guarantee for English prompts.
 
-注意该项目为归因工具，只对指纹库内的模型尽可能去判断属于哪种模型，若待测模型不在指纹库中，得到任何结果都是有可能的
+## Limitations
 
-目前已知因系统提示词严重影响模型偏好，在Claude Code中得到的测试结果存在较大偏差，建议不要在Claude Code中测试
+Results are reference-bank similarity evidence, not decisive proof of backend identity, model replacement, reduced capability, or provider cheating. Any result is possible for models absent from the bank.
 
-## 致谢
+System prompts can substantially affect numerical preferences. Upstream reports significant bias in Claude Code and recommends avoiding tests there. Long contexts and shared-context retries can also change distributions or correlate results.
 
-感谢 [hanlinwenyuan/hlwy-ai-checker](https://github.com/hanlinwenyuan/hlwy-ai-checker)。该项目较早将语言模型的随机数字生成偏差用于第三方 API 渠道一致性检查，为 ModelTrace 提供了重要参考。
+## Project layout
 
+```text
+app.py                   Web API
+fingerprint.py           Fingerprint extraction and attribution
+bank_builder.py          Bank construction and calibration
+challenge_suite.py       English enrollment challenges
+enrollment.py            API requests and fingerprint collection
+rebuild_unified_bank.py   Unified bank rebuild
+data/                    Reference data, banks, localization provenance
+static/                  Browser edition and shared assets
+templates/               Python web templates
+codex-plugin/            ModelTrace Guard plugin and tests
+tests/                   English and reference-integrity checks
+```
 
+## Build and verify
 
-[LINUX DO](https://linux.do/)
+```sh
+python -m unittest discover -s tests -v
+node --test tests/*.test.mjs
+node codex-plugin/build-plugin.mjs
+node codex-plugin/validate-distribution.mjs
+node codex-plugin/validate-reference-data.mjs
+node --test --test-concurrency=1 codex-plugin/modeltrace-guard/tests/*.test.mjs
+node codex-plugin/verify-parity.mjs
+```
+
+## Acknowledgments
+
+Thanks to [hanlinwenyuan/hlwy-ai-checker](https://github.com/hanlinwenyuan/hlwy-ai-checker), an early use of language-model numerical generation bias for third-party API consistency checks, and the [LINUX DO](https://linux.do/) community.

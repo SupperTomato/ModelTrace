@@ -52,23 +52,23 @@ test('late arrival of model metadata updates future expectations, not old sample
 
 test('unnamed tasks explicitly distinguish workspace fallback from a real task title', () => {
   const s = newState(session, 1000); s.workspaceName = 'ModelTrace';
-  assert.ok(summarize(s, '/test').displayName.startsWith('未命名任务（ModelTrace） · '));
+  assert.ok(summarize(s, '/test').displayName.startsWith('Unnamed task (ModelTrace) · '));
   assert.ok(!summarize(s, '/test').displayName.includes(session));
-  setTaskName(s, '  重构登录流程  ', 1001); assert.equal(summarize(s, '/test').displayName, '重构登录流程');
-  setTaskName(s, '重构登录流程', 1002); assert.equal(s.events.length, 1);
+  setTaskName(s, '  Refactor the login flow  ', 1001); assert.equal(summarize(s, '/test').displayName, 'Refactor the login flow');
+  setTaskName(s, 'Refactor the login flow', 1002); assert.equal(s.events.length, 1);
   for (const bad of ['', ' ', 'x'.repeat(121), 'a\nb', 3, null]) assert.throws(() => setTaskName(s, bad));
   assert.equal(workspaceName('C:\\work\\project\\'), 'project'); assert.equal(workspaceName('/work/project'), 'project'); assert.equal(workspaceName('bad\npath'), null);
 });
 
 test('native task titles are metadata only and never override a custom name', () => {
   const s = newState(session, 1000); s.workspaceName = 'traitnew';
-  setCodexTaskName(s, '  开启 ModelTrace Guard  ', 1001);
-  assert.equal(summarize(s, '/test').displayName, '开启 ModelTrace Guard');
+  setCodexTaskName(s, '  Enable ModelTrace Guard  ', 1001);
+  assert.equal(summarize(s, '/test').displayName, 'Enable ModelTrace Guard');
   assert.equal(s.taskName, null); assert.equal(s.enabled, false); assert.equal(s.issued, 0);
-  setTaskName(s, '我的自定义名称', 1002);
-  setCodexTaskName(s, 'Codex 中的新标题', 1003);
-  assert.equal(summarize(s, '/test').displayName, '我的自定义名称');
-  assert.equal(summarize(s, '/test').codexTaskName, 'Codex 中的新标题');
+  setTaskName(s, 'My custom name', 1002);
+  setCodexTaskName(s, 'Codex  for a new title', 1003);
+  assert.equal(summarize(s, '/test').displayName, 'My custom name');
+  assert.equal(summarize(s, '/test').codexTaskName, 'Codex  for a new title');
   const before = JSON.stringify(s);
   for (const name of ['', ' ', null, 42, 'x'.repeat(121), 'bad\nname']) setCodexTaskName(s, name);
   assert.equal(JSON.stringify(s), before);
@@ -98,8 +98,8 @@ test('same-workspace tasks do not inherit opt-in and dashboard selection cannot 
 
 test('label CLI can name an inactive task without starting probes or changing counters', async (t) => {
   const dir = await fixture(t), flags = ['--session', session, '--data-dir', dir];
-  const result = await run(['label', ...flags, '--name', '启用 ModelTrace Guard 采样'], {});
-  assert.equal(result.enabled, false); assert.equal(result.probesIssued, 0); assert.equal(result.taskName, '启用 ModelTrace Guard 采样');
+  const result = await run(['label', ...flags, '--name', 'Enable ModelTrace Guard Sampling'], {});
+  assert.equal(result.enabled, false); assert.equal(result.probesIssued, 0); assert.equal(result.taskName, 'Enable ModelTrace Guard Sampling');
   const before = await readFile(sessionPath(dir, session), 'utf8');
   await assert.rejects(run(['label', ...flags, '--name', 'wrong'], { CODEX_THREAD_ID: 'other-task' }), /current Codex task/);
   await assert.rejects(run(['label', ...flags, '--name', ''], {}));
@@ -113,13 +113,13 @@ test('dashboard name updates are authenticated, metadata-only, and preserve lega
   const route = `${service.origin}/api/sessions/${digest(session)}`;
   const headers = { Authorization: `Bearer ${service.token}`, Origin: service.origin, 'Content-Type': 'application/json' };
   const post = (body, override = {}) => fetch(route + '/name', { method: 'POST', headers: { ...headers, ...override }, body: JSON.stringify(body) });
-  assert.equal((await post({ name: '测试名称' }, { Authorization: '' })).status, 401);
-  assert.equal((await post({ name: '测试名称' }, { Origin: 'https://hostile.invalid' })).status, 403);
+  assert.equal((await post({ name: 'Test name' }, { Authorization: '' })).status, 401);
+  assert.equal((await post({ name: 'Test name' }, { Origin: 'https://hostile.invalid' })).status, 403);
   for (const bad of [{}, { name: '' }, { name: 42 }, { name: 'valid', expected: 'other' }, { name: 'valid', enabled: true }]) assert.equal((await post(bad)).status, 400);
-  const res = await post({ name: '启用 ModelTrace Guard 采样' }); assert.equal(res.status, 200);
-  const view = await res.json(); assert.equal(view.displayName, '启用 ModelTrace Guard 采样'); assert.equal(view.samples[0].displayOutcome, 'missing_expected_model');
+  const res = await post({ name: 'Enable ModelTrace Guard Sampling' }); assert.equal(res.status, 200);
+  const view = await res.json(); assert.equal(view.displayName, 'Enable ModelTrace Guard Sampling'); assert.equal(view.samples[0].displayOutcome, 'missing_expected_model');
   const after = await readState(dir, session);
   for (const key of ['samples', 'issued', 'pending', 'expected', 'model', 'config', 'enabled', 'alerts']) assert.deepEqual(after[key], before[key], key);
   assert.equal(after.samples[0].outcome, 'unknown_expected_model'); assert.equal(after.samples[0].sampleSha256, 'preserve-this');
-  const listing = await (await fetch(service.origin + '/api/sessions', { headers })).json(); assert.equal(listing.sessions[0].displayName, '启用 ModelTrace Guard 采样');
+  const listing = await (await fetch(service.origin + '/api/sessions', { headers })).json(); assert.equal(listing.sessions[0].displayName, 'Enable ModelTrace Guard Sampling');
 });

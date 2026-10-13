@@ -167,7 +167,7 @@ export function analyzeGlobalOutputs(outputs, bank) {
     diagnostics.push({ index, parsed_numbers: numbers.length, minimum_numbers: minimum, accepted });
     if (accepted) valid.push({ numbers, counts: countNumbers(numbers), scores: robustScoreNumbers(numbers, bank) });
   });
-  if (!valid.length) throw new Error("没有可用回答：请粘贴完整数字序列；拒答或严重截断的回答不会计入。");
+  if (!valid.length) throw new Error("No usable response. Paste the complete number sequence; refusals and severely truncated responses are excluded.");
 
   const combinedScores = modelIds.map((_, modelIndex) => mean(valid.map((item) => item.scores[modelIndex])));
   const calibrationKey = String(Math.min(valid.length, 3));
@@ -207,6 +207,6 @@ export function analyzeGlobalOutputs(outputs, bank) {
     family_prediction_name: familyNames[winningFamily],
     family_probability: familyProbabilities[winningFamily],
     family_probabilities: familyOrder.map((family) => ({ family, display_name: familyNames[family], probability: familyProbabilities[family] })),
-    method: "统一全局稳健数字指纹",
+    method: "Unified global robust numerical fingerprint",
   };
 }

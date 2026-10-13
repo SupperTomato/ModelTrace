@@ -18,11 +18,11 @@ export function summarize(state, directory, now = Date.now()) {
   const fingerprintDisplayStatus = latestSample?.outcome === outcome ? displayOutcome(latestSample) : outcome;
   const status = state.taskHalt ? 'task_halted' : !state.enabled ? 'disabled' : pendingExpired ? 'coverage_gap' : state.pending ? 'awaiting_sample' : !hookObserved ? (hookState === 'idle' ? 'waiting_for_work_tool' : 'hooks_unverified') : state.confirmation?.status === 'active' ? 'confirming_mismatch' : fingerprintDisplayStatus;
   const startedAt = state.startedAt || state.createdAt;
-  const fallbackDate = new Date(startedAt).toLocaleString('zh-CN', { hour12: false });
+  const fallbackDate = new Date(startedAt).toLocaleString('en-US', { hour12: false });
   return {
     enabled: state.enabled, status, fingerprintStatus: outcome, fingerprintDisplayStatus,
     taskName: state.taskName || null, codexTaskName: state.codexTaskName || null,
-    displayName: state.taskName || state.codexTaskName || `未命名任务${state.workspaceName ? `（${state.workspaceName}）` : ''} · ${fallbackDate}`,
+    displayName: state.taskName || state.codexTaskName || `Unnamed task${state.workspaceName ? ` (${state.workspaceName})` : ''} · ${fallbackDate}`,
     workspaceName: state.workspaceName || null, startedAt, enabledAt: state.enabledAt || state.startedAt || null,
     reportedModel: state.model, expectedModel: state.expected, expectedSource: state.expectedSource,
     epoch: state.epoch, frequency: validateConfig({}, state.config), hookObserved, hookState,

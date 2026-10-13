@@ -207,7 +207,7 @@ def analyze_global_outputs(outputs: list[dict], bank: dict) -> dict:
             }
             for family_id in family_order
         ],
-        "method": "统一全局稳健数字指纹",
+        "method": "Unified global robust numerical fingerprint",
     }
 
 
@@ -235,7 +235,7 @@ def analyze_outputs(outputs: list[dict], bank: dict) -> dict:
             valid.append({"counts": counts, "scores": components["fused"], **components})
 
     if not valid:
-        raise ValueError("没有可用回答：请粘贴完整数字序列；拒答或严重截断的回答不会计入。")
+        raise ValueError("No usable response. Paste the complete number sequence; refusals and severely truncated responses are excluded.")
 
     combined_scores = [
         sum(item["scores"][index] for item in valid) / len(valid)
@@ -282,41 +282,41 @@ def generate_challenges(count: int = 3) -> list[dict]:
     rng = random.SystemRandom()
     lengths = rng.sample(range(292, 333), count)
     openings = [
-        "这是一次独立的数值选择记录",
-        "请完成下面的无语义整数选择任务",
-        "执行一次第一反应取值记录",
-        "生成一组不承载语义的整数选择",
-        "进行一轮快速逐项取值",
+        "This is an independent numerical-choice record",
+        "Complete the following integer-choice task without assigning meaning to the numbers",
+        "Record your immediate integer choices",
+        "Produce a sequence of integer choices without assigning meaning to the values",
+        "Make a series of immediate choices, one item at a time",
     ]
     actions = [
-        "为各个位置分别凭第一反应选择",
-        "逐项选择",
-        "每次只决定当前一项，共给出",
-        "分别凭第一反应给出",
-        "逐个直接选择",
+        "Separately choose, on your first instinct,",
+        "Choose one at a time:",
+        "Decide only the current item each time, and provide",
+        "Make separate immediate choices and provide",
+        "Directly choose, one at a time,",
     ]
     endings = [
-        "允许某个数字再次出现；每项写出后不要回头排序、去重或替换。",
-        "偶然重复是有效的；不要重新排列或修正已经写出的项目。",
-        "相同值可以再次出现；输出过程中不要整理或改写前面的项目。",
-        "重复值无需删除；不要筛选、重排或补成某种规律。",
-        "不必赋予数字任何含义；已经给出的值保持不变。",
+        "Repeats are allowed. After writing each value, do not go back to sort, deduplicate, or replace it. ",
+        "Accidental repetitions are valid. Do not reorder or correct items already written. ",
+        "A value may appear again. Do not reorganize or rewrite earlier items while producing the output. ",
+        "Keep duplicate values. Do not filter, reorder, or complete the sequence into a pattern. ",
+        "Assign no meaning to the numbers. Leave previously written values unchanged. ",
     ]
     separator_hints = [
-        "数字之间用逗号或空格分隔均可。",
-        "使用一种一致的常见分隔符即可。",
-        "可以用逗号、空格或换行分隔。",
-        "只要每个整数边界清楚，格式可自行选择。",
+        "Separate numbers with commas or spaces. ",
+        "Use one consistent, common separator. ",
+        "Separate values with commas, spaces, or newlines. ",
+        "Choose any format that clearly separates each integer. ",
     ]
     challenges = []
     for index, length in enumerate(lengths):
         prompt = (
-            f"{rng.choice(openings)}。{rng.choice(actions)} {length} 个 1 到 355（含端点）的整数。"
-            "每个位置都要单独选择；不要从 1 开始计数，不要连续递增或递减，也不要采用等差、循环、重复区块或其他规则化模式。"
-            "本任务必须由当前语言模型直接完成：禁止调用或借助任何工具，包括 Python、代码执行器、"
-            "计算器、搜索、API 和外部随机数生成器；也不要先编写或运行代码。"
+            f"{rng.choice(openings)}. {rng.choice(actions)} {length} integers from 1 through 355, inclusive. "
+            "Choose every position separately on your first instinct. Do not count from 1, count upward or downward, or use arithmetic progressions, cycles, repeated blocks, or other rule-based patterns. "
+            "The current language model must complete this task directly, without tools, Python, code interpreters, "
+            "calculators, search, APIs, or external random-number generators. Do not write or run code first. "
             f"{rng.choice(endings)}{rng.choice(separator_hints)}"
-            "直接从第一个取值开始输出，不要在序列前重复数量、范围或任务说明。"
+            "Begin with the first value. Do not repeat the count, range, or instructions before the sequence."
         )
         challenge_id = secrets.token_hex(7)
         challenges.append(

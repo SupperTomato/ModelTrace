@@ -54,28 +54,28 @@ function renderChallenges() {
   byId("challenge-list").innerHTML = state.challenges.map((challenge, index) => `
     <article class="challenge-item">
       <div class="challenge-header">
-        <strong>挑战 ${index + 1}</strong>
-        <span>${challenge.expected_count} 个数字</span>
-        <button type="button" data-copy="${index}">复制提示词</button>
+        <strong>Challenge ${index + 1}</strong>
+        <span>${challenge.expected_count} numbers</span>
+        <button type="button" data-copy="${index}">Copy prompt</button>
       </div>
       <div class="challenge-columns">
-        <div><label>发送给待测模型</label><pre>${escapeHtml(challenge.prompt)}</pre></div>
-        <div><label for="output-${index}">粘贴完整输出</label><textarea id="output-${index}" spellcheck="false" placeholder="保留文字、标点、代码块和完整数字序列"></textarea></div>
+        <div><label>Send to the model being tested</label><pre>${escapeHtml(challenge.prompt)}</pre></div>
+        <div><label for="output-${index}">Paste the complete output</label><textarea id="output-${index}" spellcheck="false" placeholder="Include text, punctuation, code blocks, and the complete number sequence"></textarea></div>
       </div>
     </article>
   `).join("");
   document.querySelectorAll("[data-copy]").forEach((button) => {
     button.addEventListener("click", async () => {
       await navigator.clipboard.writeText(state.challenges[Number(button.dataset.copy)].prompt);
-      button.textContent = "已复制";
-      window.setTimeout(() => { button.textContent = "复制提示词"; }, 1000);
+      button.textContent = "Copied";
+      window.setTimeout(() => { button.textContent = "Copy prompt"; }, 1000);
     });
   });
 }
 
 function renderResult(payload) {
   const diagnostics = payload.diagnostics.map((item, index) => `
-    <span class="diagnostic ${item.accepted ? "accepted" : "rejected"}">挑战 ${index + 1}: ${item.parsed_numbers} 个数字 · ${item.accepted ? "计入" : "忽略"}</span>
+    <span class="diagnostic ${item.accepted ? "accepted" : "rejected"}">Challenge ${index + 1}: ${item.parsed_numbers} numbers · ${item.accepted ? "Included" : "Excluded"}</span>
   `).join("");
   const rows = payload.results.map((item, index) => `
     <tr class="${index === 0 ? "winner" : ""}">
@@ -85,21 +85,21 @@ function renderResult(payload) {
     </tr>
   `).join("");
   const apiNote = payload.api_test
-    ? `<span>API 获得 ${payload.api_test.received}/${payload.api_test.requested} 份有效回答，实际尝试 ${payload.api_test.attempted}/${payload.api_test.max_attempts}${payload.api_test.errors.length ? `，${payload.api_test.errors.length} 次未采用` : ""}</span>`
+    ? `<span>API received ${payload.api_test.received}/${payload.api_test.requested} valid responses; attempts ${payload.api_test.attempted}/${payload.api_test.max_attempts}${payload.api_test.errors.length ? `, ${payload.api_test.errors.length} excluded attempts` : ""}</span>`
     : "";
   byId("result").innerHTML = `
     <div class="result-summary">
-      <div><span>最可能模型</span><strong>${escapeHtml(payload.prediction_name)}</strong></div>
-      <div><span>统一库概率</span><strong>${percent(payload.probability)}</strong></div>
-      <div><span>自动识别家族</span><strong>${escapeHtml(payload.family_prediction_name)} · ${percent(payload.family_probability)}</strong></div>
-      <div><span>有效查询</span><strong>${payload.used_outputs}/3</strong></div>
+      <div><span>Top model candidate</span><strong>${escapeHtml(payload.prediction_name)}</strong></div>
+      <div><span>Bank probability</span><strong>${percent(payload.probability)}</strong></div>
+      <div><span>Detected family</span><strong>${escapeHtml(payload.family_prediction_name)} · ${percent(payload.family_probability)}</strong></div>
+      <div><span>Valid queries</span><strong>${payload.used_outputs}/3</strong></div>
     </div>
     <div class="diagnostics">${diagnostics}</div>
-    <div class="table-wrap"><table><thead><tr><th>排序</th><th>候选模型</th><th>家族</th><th>归因概率</th><th>分布相似度</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Model candidate</th><th>Family</th><th>Attribution probability</th><th>Distribution similarity</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${apiNote ? `<div class="result-note">${apiNote}</div>` : ""}
-    <div class="result-guidance" role="note" aria-label="结果说明">
-      <p>本工具仅对指纹库内的模型进行归因；若待测模型不在指纹库中，得到任何结果都有可能。</p>
-      <p>Claude Code 的系统提示词会影响模型偏好，测试结果存在较大偏差，建议不要在 Claude Code 中测试。</p>
+    <div class="result-guidance" role="note" aria-label="Result explanation">
+      <p>Attribution is limited to the models in the fingerprint bank. An unlisted model can be assigned to any existing candidate.</p>
+      <p>Claude Code system prompts can affect model preferences and substantially bias results. Testing within Claude Code is not recommended.</p>
     </div>
   `;
   byId("result").hidden = false;
@@ -109,7 +109,7 @@ function renderResult(payload) {
 async function analyzeManual() {
   const button = byId("analyze");
   button.disabled = true;
-  setMessage(byId("test-message"), "正在计算……", "working");
+  setMessage(byId("test-message"), "Calculating...", "working");
   const outputs = state.challenges.map((challenge, index) => ({
     text: byId(`output-${index}`).value,
     expected_count: challenge.expected_count,
@@ -120,7 +120,7 @@ async function analyzeManual() {
     setMessage(byId("test-message"), "");
     renderResult(payload);
   } else {
-    setMessage(byId("test-message"), payload.error || "无法完成归因。", "error");
+    setMessage(byId("test-message"), payload.error || "Could not complete attribution.", "error");
     byId("result").hidden = true;
   }
   button.disabled = false;
@@ -132,11 +132,11 @@ function renderApiProgress(states, status) {
   const target = 3;
   byId("api-test-progress").hidden = false;
   byId("api-progress-status").textContent = status;
-  byId("api-progress-count").textContent = `有效 ${valid}/${target} · 已尝试 ${attempted}/${states.length}`;
+  byId("api-progress-count").textContent = `Valid ${valid}/${target} · Attempts ${attempted}/${states.length}`;
   byId("api-progress-fill").style.width = `${(valid / target) * 100}%`;
   byId("api-progress-steps").innerHTML = states.map((state, index) => {
-    const labels = { pending: "等待", working: "请求中", done: "有效", invalid: "数字不足", error: "接口失败", skipped: "无需调用" };
-    return `<span class="progress-step ${state}"><b>${index + 1}</b>挑战 ${index + 1} · ${labels[state]}</span>`;
+    const labels = { pending: "Waiting", working: "Requesting", done: "Valid", invalid: "Too few numbers", error: "API failed", skipped: "Not needed" };
+    return `<span class="progress-step ${state}"><b>${index + 1}</b>Challenge ${index + 1} · ${labels[state]}</span>`;
   }).join("");
 }
 
@@ -161,11 +161,11 @@ async function testViaApi(event) {
     api_model: byId("test-api-model").value,
     temperature: optionalNumber("test-temperature"),
   };
-  renderApiProgress(states, "已生成独立挑战，准备调用模型");
+  renderApiProgress(states, "Independent challenges generated; preparing model requests");
 
   for (let index = 0; index < challenges.length && outputs.length < target; index += 1) {
     states[index] = "working";
-    renderApiProgress(states, `正在进行第 ${index + 1} 次尝试，等待模型完整输出……`);
+    renderApiProgress(states, `Running attempt ${index + 1}; waiting for the complete model output...`);
     try {
       const response = await fetch("/api/test/probe", {
         method: "POST",
@@ -177,19 +177,19 @@ async function testViaApi(event) {
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "接口请求失败");
+      if (!response.ok) throw new Error(payload.error || "API request failed");
       if (payload.accepted) {
         outputs.push({ text: payload.text, expected_count: challenges[index].expected_count });
         states[index] = "done";
       } else {
-        errors.push(`尝试 ${index + 1}: 有效数字 ${payload.parsed_numbers}/${payload.minimum_numbers}`);
+        errors.push(`Attempt ${index + 1}: Valid numbers ${payload.parsed_numbers}/${payload.minimum_numbers}`);
         states[index] = "invalid";
       }
     } catch (error) {
-      errors.push(`尝试 ${index + 1}: ${error.message}`);
+      errors.push(`Attempt ${index + 1}: ${error.message}`);
       states[index] = "error";
     }
-    renderApiProgress(states, `当前已有 ${outputs.length}/${target} 份有效回答`);
+    renderApiProgress(states, `Received ${outputs.length}/${target} valid responses`);
   }
 
   if (outputs.length === target) {
@@ -197,13 +197,13 @@ async function testViaApi(event) {
   }
 
   if (!outputs.length) {
-    renderApiProgress(states, "六次尝试后仍没有可用回答");
-    setMessage(byId("test-message"), `没有获得可分析输出。${errors[0] || ""}`, "error");
+    renderApiProgress(states, "No usable responses after six attempts");
+    setMessage(byId("test-message"), `No output was available for analysis. ${errors[0] || ""}`, "error");
     button.disabled = false;
     return;
   }
 
-  renderApiProgress(states, "模型回答已收齐，正在计算归因概率……");
+  renderApiProgress(states, "Model responses received; calculating attribution probabilities...");
   const analysisResponse = await fetch("/api/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -213,18 +213,18 @@ async function testViaApi(event) {
   if (analysisResponse.ok) {
     const attempted = states.filter((state) => ["done", "invalid", "error"].includes(state)).length;
     result.api_test = { requested: target, attempted, max_attempts: challenges.length, received: outputs.length, errors };
-    renderApiProgress(states, `测试完成：${outputs.length}/${target} 份有效回答进入归因`);
+    renderApiProgress(states, `Test complete: ${outputs.length}/${target} valid responses used for attribution`);
     renderResult(result);
   } else {
-    setMessage(byId("test-message"), result.error || "API 自动测试失败。", "error");
+    setMessage(byId("test-message"), result.error || "Automatic API test failed.", "error");
   }
   button.disabled = false;
 }
 
 function updateUnifiedSummary(summary) {
   state.unified = summary;
-  byId("topbar-bank-count").textContent = `${summary.model_count} 个候选模型`;
-  byId("active-bank-badge").textContent = `${summary.model_count} 个候选模型`;
+  byId("topbar-bank-count").textContent = `${summary.model_count} model candidates`;
+  byId("active-bank-badge").textContent = `${summary.model_count} model candidates`;
 }
 
 function renderInventory() {
@@ -232,13 +232,13 @@ function renderInventory() {
   byId("model-options").innerHTML = state.bank.models.map((model) => `<option value="${escapeHtml(model.id)}"></option>`).join("");
   byId("bank-inventory").innerHTML = state.bank.models.length
     ? state.bank.models.map((model) => `<span class="fingerprint-item">${escapeHtml(model.display_name)}</span>`).join("")
-    : `<span class="empty-inventory">暂无指纹</span>`;
+    : `<span class="empty-inventory">No fingerprints yet</span>`;
 }
 
 async function refreshBank() {
   const response = await fetch(`/api/bank?bank_id=${encodeURIComponent(state.bankId)}`);
   const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error || "无法读取指纹库");
+  if (!response.ok) throw new Error(payload.error || "Could not read the fingerprint bank");
   state.bank = payload;
   renderInventory();
 }
@@ -256,9 +256,9 @@ async function enrollAutomatically(event) {
   const started = Date.now();
   const progressTimer = window.setInterval(() => {
     const seconds = Math.floor((Date.now() - started) / 1000);
-    setMessage(byId("enrollment-message"), `正在自动识别协议并采集 ${requested} 份回答 · 已等待 ${seconds} 秒`, "working");
+    setMessage(byId("enrollment-message"), `Detecting the API format and collecting ${requested} responses · Elapsed ${seconds} seconds`, "working");
   }, 1000);
-  setMessage(byId("enrollment-message"), `正在自动识别协议并采集 ${requested} 份回答`, "working");
+  setMessage(byId("enrollment-message"), `Detecting the API format and collecting ${requested} responses`, "working");
   let response;
   try {
     response = await fetch("/api/enroll/auto", {
@@ -285,9 +285,9 @@ async function enrollAutomatically(event) {
     state.bank = payload.bank;
     updateUnifiedSummary(payload.unified);
     renderInventory();
-    setMessage(byId("enrollment-message"), `采集完成：收到 ${payload.received}/${payload.requested} 份，${payload.accepted} 份进入指纹库，${payload.rejected} 份无效，${payload.errors.length} 次接口错误。`, "success");
+    setMessage(byId("enrollment-message"), `Collection complete: received ${payload.received}/${payload.requested} responses, ${payload.accepted} included in the fingerprint bank, ${payload.rejected} invalid responses, ${payload.errors.length} API errors.`, "success");
   } else {
-    setMessage(byId("enrollment-message"), payload.error || "自动采集失败。", "error");
+    setMessage(byId("enrollment-message"), payload.error || "Automatic collection failed.", "error");
   }
   button.disabled = false;
 }
@@ -317,9 +317,9 @@ async function createBank(event) {
     renderInventory();
     byId("new-bank-name").value = "";
     byId("create-bank-form").hidden = true;
-    setMessage(byId("enrollment-message"), `已创建 ${payload.bank.label}`, "success");
+    setMessage(byId("enrollment-message"), `Created ${payload.bank.label}`, "success");
   } else {
-    setMessage(byId("enrollment-message"), payload.error || "创建失败。", "error");
+    setMessage(byId("enrollment-message"), payload.error || "Creation failed.", "error");
   }
   button.disabled = false;
 }

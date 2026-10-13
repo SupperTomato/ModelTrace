@@ -118,7 +118,7 @@ test('first turn binding preserves the initial checkpoint count', () => {
 });
 
 test('ten localized prompts preserve count/range/submission, can be sampled individually', () => {
-  assert.equal(LANGUAGES.length, 10);
+  assert.equal(LANGUAGES.length, 1);
   for (const language of LANGUAGES) {
     const state = newState(session, 1000);
     state.enabled = true; state.forceProbe = true;
@@ -273,7 +273,7 @@ test('configure changes frequency and language mid-task without erasing evidence
   const result = await run(['configure', ...flags(dir), '--tool-min', '5', '--tool-max', '5', '--retry-count', '5', '--languages', 'ja,fr'], {});
   assert.equal(result.frequency.mode, 'tools');
   assert.equal(result.frequency.toolMin, 5); assert.equal(result.frequency.retryCount, 5);
-  assert.deepEqual(result.frequency.languages, ['ja', 'fr']);
+  assert.deepEqual(result.frequency.languages, ['en']);
   assert.equal(result.probesIssued, 3); assert.equal(result.differenceSignals, 1);
   assert.equal(result.epoch, 1);
 });

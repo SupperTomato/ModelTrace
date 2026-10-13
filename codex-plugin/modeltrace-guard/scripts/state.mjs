@@ -3,7 +3,7 @@ import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { LANGUAGES } from './prompts.mjs';
+import { LANGUAGES, LEGACY_LANGUAGES } from './prompts.mjs';
 import { compactHistory } from './history.mjs';
 import { removeSnapshot } from './fork-snapshot.mjs';
 export { validateNumbers } from './probe-output.mjs';
@@ -11,9 +11,9 @@ export { validateNumbers } from './probe-output.mjs';
 export const DEFAULTS = Object.freeze({
   mode: 'tools', toolMin: 16, toolMax: 32, retryCount: 3,
   pendingSeconds: 180,
-  languages: ['zh', 'en'],
+  languages: ['en'],
 });
-export const WARNING = 'Closed-set fingerprint evidence for a fork continuation; not backend authentication. Frozen-rollout and multilingual error rates have not been independently measured.';
+export const WARNING = 'Closed-set fingerprint evidence for a fork continuation; not backend authentication. Frozen-rollout and English-prompt error rates have not been independently measured.';
 export const digest = (value) => createHash('sha256').update(value).digest('hex');
 
 export function validateConfig(patch = {}, previous = DEFAULTS) {
@@ -22,7 +22,8 @@ export function validateConfig(patch = {}, previous = DEFAULTS) {
   const config = { ...DEFAULTS, ...base, mode: 'tools', ...patch };
   for (const key of Object.keys(config)) if (!Object.hasOwn(DEFAULTS, key)) throw new Error(`Unknown frequency option: ${key}`);
   if (config.mode !== 'tools') throw new Error('Only tool-call frequency is supported; use --tool-min and --tool-max');
-  if (!Array.isArray(config.languages) || !config.languages.length || new Set(config.languages).size !== config.languages.length || config.languages.some((code) => !LANGUAGES.includes(code))) throw new Error(`languages must be distinct codes from ${LANGUAGES.join(',')}`);
+  if (!Array.isArray(config.languages) || !config.languages.length || new Set(config.languages).size !== config.languages.length || config.languages.some((code) => !LEGACY_LANGUAGES.includes(code))) throw new Error(`languages must be distinct codes from ${LANGUAGES.join(',')}`);
+  config.languages = ['en'];
   for (const key of Object.keys(DEFAULTS).filter((key) => !['mode', 'languages'].includes(key))) {
     if (!Number.isSafeInteger(config[key]) || config[key] < 1 || config[key] > 1000000) throw new Error(`${key} must be an integer in 1..1000000`);
   }
@@ -49,7 +50,7 @@ export function record(state, type, now, details = {}) {
 }
 
 export function setTaskName(state, name, now = Date.now()) {
-  if (typeof name !== 'string' || !name.trim() || name.trim().length > 120 || /[\x00-\x1f\x7f]/.test(name)) throw new Error('任务名称需为 1–120 个字符，不能包含换行或控制字符');
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 120 || /[\x00-\x1f\x7f]/.test(name)) throw new Error('Task names must contain 1–120 characters, without line breaks or control characters');
   const clean = name.trim();
   if (state.taskName !== clean) {
     state.taskName = clean;
@@ -323,6 +324,15 @@ export async function withState(directory, session, callback, { lockTimeoutMs = 
       record(state, 'sampling_mode_migrated', Date.now(), { mode: 'fork' });
     }
     const config = validateConfig({}, state.config);
+    // Do not relabel historical probes or mix translated retries with an old batch.
+    if ((state.pending && state.pending.language !== 'en')
+      || (state.confirmation?.status === 'active' && state.confirmation.language !== 'en')) {
+      abandon(state, Date.now(), 'probe_language_changed');
+      interruptConfirmation(state, Date.now(), 'probe_language_changed');
+      state.epoch += 1;
+      state.forceProbe = true;
+      record(state, 'segment_started', Date.now(), { reason: 'probe_language_changed', model: state.model, expected: state.expected });
+    }
     if (JSON.stringify(config) !== JSON.stringify(state.config) || state.lastOutcome === 'budget_paused') {
       const previous = state.config;
       const previousOutcome = state.lastOutcome;

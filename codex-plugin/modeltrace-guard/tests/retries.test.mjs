@@ -80,7 +80,7 @@ test('default three extra retries follow immediate notification and end in a per
     if (retry === 3) {
       assert.equal(result.agentAction, 'stop_and_notify_user');
       assert.equal(result.notification.level, 'confirmed_mismatch');
-      assert.match(result.userNotice, /3 次复测全部/);
+      assert.match(result.userNotice, /all 3 additional retries mismatched/);
       assert.match(result.controlContext, /STOP THE ORIGINAL TASK NOW AND NOTIFY THE USER/);
     } else assert.equal(result.agentAction, 'notify_user_now');
   }
@@ -118,7 +118,7 @@ test('retry-count and language changes apply to the next batch; current comparis
   await withState(dir, session, (state) => { state.forceProbe = true; });
   await handleHook(event('UserPromptSubmit', { turn_id: 'turn-2' }), dir);
   const next = await submitPending(dir);
-  assert.equal(next.confirmation.target, 7); assert.equal(next.confirmation.language, 'ja');
+  assert.equal(next.confirmation.target, 7); assert.equal(next.confirmation.language, 'en');
 });
 
 function comparisonFixture(target = 3) {

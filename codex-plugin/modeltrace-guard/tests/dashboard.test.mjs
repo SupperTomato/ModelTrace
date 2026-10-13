@@ -104,14 +104,14 @@ test('page refresh reads existing evidence without mutating state or exposing pr
 test('dashboard keeps operational labels without the removed disclaimer copy', async (t) => {
   const dir = await fixture(t), s = await serverFixture(t, dir);
   const page = await (await s.call('/')).text();
-  for (const removed of ['显示名称仅用于此仪表盘', '不会重命名 Codex', '抽样证据，不是全程保证', '抽样结果不构成全程保证', '指纹权重不是后端身份或作弊概率', '同上下文、多语言阈值尚未独立校准', '探针之间、隐藏推理和子代理', '不能独立验证用户收到', '不是模型真实身份概率', '只更改仪表盘名称']) {
+  for (const removed of ['The display name is used only by this dashboard', 'Does not rename  Codex', 'Sampled evidence; no guarantee for the entire task', 'Sampling does not guarantee coverage of the entire task', 'Fingerprint weights are not probabilities of backend identity or cheating', 'Context-dependent thresholds have not been independently calibrated', 'Between probes, hidden reasoning, and subagents', 'Cannot independently verify receipt by the user', 'Not a probability of the model\'s true identity', 'Only changes the dashboard name']) {
     assert.ok(!page.includes(removed), `Removed UI copy must stay absent: ${removed}`);
   }
   for (const id of ['task-identity', 'task-meta', 'name-dialog', 'alerts', 'weights', 'error']) assert.ok(page.includes(`id="${id}"`));
-  assert.ok(page.includes('检测到指纹不一致时，要求智能体主动告知用户。'));
-  assert.ok(page.includes('参考库内的相对权重'));
+  assert.ok(page.includes('Require the agent to notify the user when a fingerprint mismatch is detected.'));
+  assert.ok(page.includes('Relative weight within the reference bank'));
   assert.ok(!page.includes('class="notice disclaimer"'));
-  assert.ok(!page.includes('本地计算 · 实验版'));
+  assert.ok(!page.includes('Computed locally · Experimental'));
   assert.ok(!page.includes('class="privacy-badge"'));
   assert.ok(page.includes('id="refresh"'));
 });
@@ -123,7 +123,7 @@ test('configuration API preserves counts, pending probe and alert history and re
   const res = await s.call(route, { toolMin: 120, toolMax: 120, retryCount: 5, languages: ['ja', 'ar'] });
   assert.equal(res.status, 200);
   const after = await readState(dir, session);
-  assert.equal(after.config.mode, 'tools'); assert.equal(after.config.toolMin, 120); assert.equal(after.config.retryCount, 5); assert.deepEqual(after.config.languages, ['ja', 'ar']);
+  assert.equal(after.config.mode, 'tools'); assert.equal(after.config.toolMin, 120); assert.equal(after.config.retryCount, 5); assert.deepEqual(after.config.languages, ['en']);
   assert.equal(after.pending.id, 'already-issued'); assert.equal(after.pending.language, 'en'); assert.equal(after.issued, 2); assert.equal(after.alerts.length, 1);
   const beforeInvalid = JSON.stringify(after);
   for (const body of [{ toolMin: 9, toolMax: 2 }, { languages: [] }, { mode: 'time' }, { mode: 'either' }, { secondsMin: 3 }, { retryCount: 0 }, { retryCount: 101 }, { retryCount: 2.5 }, { retryCount: '3' }, { maxPerTurn: 8 }, { maxPerSession: 40 }, { enabled: true }, { expected: 'other' }, JSON.parse('{"__proto__":{"x":true}}'), { constructor: 'no' }]) assert.equal((await s.call(route, body)).status, 400);
@@ -153,9 +153,9 @@ test('dashboard reads retired time/cap settings without rewriting evidence or sh
   const page = await (await s.call('/')).text();
   assert.match(page, /name="retryCount"[^>]*min="1"[^>]*max="100"/);
   assert.ok(page.includes('id="confirmation-panel"'));
-  for (const removed of ['name="mode"', 'name="secondsMin"', 'name="secondsMax"', 'name="maxPerTurn"', 'name="maxPerSession"', '每轮探针上限', '任务累计探针上限']) assert.ok(!page.includes(removed));
+  for (const removed of ['name="mode"', 'name="secondsMin"', 'name="secondsMax"', 'name="maxPerTurn"', 'name="maxPerSession"', 'Per-turn probe limit', 'Total probe limit']) assert.ok(!page.includes(removed));
   assert.match(page, /aria-describedby="expiry-note"/);
-  assert.match(page, /超时只记为采样缺口/);
+  assert.match(page, /Timeout is recorded only as a coverage gap/);
 });
 
 test('dashboard updates next retry count without changing the active batch or clearing task halt', async (t) => {
@@ -207,4 +207,26 @@ test('launcher reuses one authenticated service and shutdown does not affect mon
   // Wait a bounded period for an acknowledged, graceful shutdown (no PID kill).
   for (let i = 0; i < 20; i += 1) { if (!(await stopDashboard(dir)).stopped) break; await delay(30); }
   assert.equal(await readFile(sessionPath(dir, session), 'utf8'), before);
+});
+
+test('dashboard rejection messages describe invalid requests in complete English', async (t) => {
+  const dir = await fixture(t); await syntheticState(dir);
+  const service = await serverFixture(t, dir), prefix = `/api/sessions/${digest(session)}`;
+  const headers = { Authorization: `Bearer ${service.token}`, Origin: service.origin, 'Content-Type': 'application/json' };
+  const raw = (body, extra = {}) => fetch(service.origin + prefix + '/configure', { method: 'POST', headers: { ...headers, ...extra }, body });
+  for (const [body, extra, status, expected] of [
+    ['{', {}, 400, 'Invalid JSON. Submit one JSON object.'],
+    ['[]', {}, 400, 'The request body must be a JSON object.'],
+    ['{}', { Origin: '' }, 403, 'Writes require a matching Origin header.'],
+    ['{}', { 'Content-Type': 'text/plain' }, 415, 'Use application/json for the request body.'],
+  ]) {
+    const response = await raw(body, extra);
+    assert.equal(response.status, status);
+    assert.equal((await response.json()).error, expected);
+  }
+  assert.equal((await (await service.call(prefix + '/name', { other: true })).json()).error, 'Changing the display name accepts only the name field.');
+  await service.call(prefix + '/stop', {});
+  const stopped = await service.call(prefix + '/configure', {});
+  assert.equal(stopped.status, 409);
+  assert.equal((await stopped.json()).error, 'Monitoring is not enabled. Enable it in the target Codex task first.');
 });

@@ -112,7 +112,7 @@ if unified_bank is None:
 def requested_bank_id(payload: dict | None = None) -> str:
     bank_id = (payload or {}).get("bank_id") or request.args.get("bank_id") or DEFAULT_BANK_ID
     if bank_id not in BANK_CONFIGS:
-        raise ValueError(f"未知指纹库：{bank_id}")
+        raise ValueError(f"Unknown fingerprint bank: {bank_id}")
     return bank_id
 
 
@@ -139,7 +139,7 @@ def summarized_unified_bank() -> dict:
     summaries = {bank_id: summarized_bank(bank_id) for bank_id in active_banks()}
     return {
         "id": "unified",
-        "label": "全部指纹",
+        "label": "All fingerprints",
         "model_count": sum(item["model_count"] for item in summaries.values()),
         "response_count": sum(item["response_count"] for item in summaries.values()),
         "family_count": len(summaries),
@@ -246,10 +246,10 @@ def create_bank():
     payload = request.get_json()
     label = payload["label"].strip()
     if not label:
-        return jsonify({"error": "请输入指纹库名称"}), 400
+        return jsonify({"error": "Enter a fingerprint bank name"}), 400
     bank_id = re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or f"bank-{secrets.token_hex(3)}"
     if bank_id in BANK_CONFIGS:
-        return jsonify({"error": "同名指纹库已存在"}), 400
+        return jsonify({"error": "A fingerprint bank with that name already exists"}), 400
     config = {
         "label": label,
         "bank_file": PROJECT / "data" / f"{bank_id}_bank.json",

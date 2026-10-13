@@ -1,10 +1,15 @@
 {
   "name": "modeltrace-guard",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "author": "xqy2006",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=18" },
-  "scripts": { "test": "node --test --test-concurrency=1 tests/*.test.mjs", "doctor": "node scripts/guard.mjs doctor" },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "doctor": "node scripts/guard.mjs doctor"
+  },
   "license": "MIT"
 }

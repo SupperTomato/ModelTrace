@@ -1,6 +1,6 @@
 ---
 name: modeltrace-guard
-description: Start, configure, inspect or stop background Codex model fingerprint monitoring using disposable forks of a frozen task snapshot. Configure tool intervals, retries and languages; open the dashboard, report mismatches and stop original work when every configured retry mismatches. Installation alone does not enable monitoring.
+description: Start, configure, inspect or stop background Codex model fingerprint monitoring using disposable forks of a frozen task snapshot. Configure tool intervals, retries and English probes; open the dashboard, report mismatches and stop original work when every configured retry mismatches. Installation alone does not enable monitoring.
 ---
 
 # ModelTrace Guard
@@ -21,9 +21,9 @@ Run `start` with only the requested overrides:
 
 - `--expected <exact-label>` sets the comparison label; `--expected auto` follows Codex metadata. `models` lists bank labels. Missing metadata and a nonempty unlisted model are different outcomes; neither is a mismatch.
 - `--tool-min 16 --tool-max 32` sets a random interval of observed work-tool completions (the default). Equal values fix the interval. Existing tasks retain their saved intervals until configured. No elapsed-time scheduling or turn/task count caps.
-- `--retry-count 3` sets additional tests after an initial mismatch; default 3, allowed 1–100. A request such as “复测改成 5 次” maps to `configure --retry-count 5`.
+- `--retry-count 3` sets additional tests after an initial mismatch; default 3, allowed 1–100. A request such as “change retries to 5” maps to `configure --retry-count 5`.
 - `--pending-seconds 180` is the issuance-to-completion deadline, not sampling frequency. Changes apply only to newly issued checkpoints.
-- `--languages zh,en,ja,ko,fr,de,es,pt,ru,ar` selects the random language pool. Default `zh,en`; one language fixes it.
+- `--languages en` uses English probes (the default and only output language). Historical language codes are accepted and normalized to English. Upgrading interrupts unfinished non-English batches without relabeling historical samples.
 
 `configure` updates future scheduling without clearing evidence or counters. The active retry batch retains its original target, language, number count, model comparison, bank and frozen context.
 
@@ -35,7 +35,7 @@ Run `start` with only the requested overrides:
 
 The runner creates one native, persisted baseline fork from the task's stored history and never starts a model turn in that baseline. The initial probe and every retry each fork this SAME baseline at the SAME turn boundary. Each probe is ephemeral and text-only; the runner closes its Codex process after completion. Raw arrays remain in the local sample store, not the parent tool result. The shared baseline is deleted after the normal probe or the whole retry batch. A retained baseline can briefly appear in Codex's task list; do not use or edit it. Cleanup refuses original tasks, altered baselines and baselines with new persisted descendants.
 
-The baseline preserves Codex's persisted history, not unseen in-flight memory. A mid-turn fork can contain Codex's interruption marker. Probe arrays stay outside the parent task; its existing messages remain unchanged. Language variation and a fixed prefix do not guarantee an invisible test or a cache hit. Report returned cached-token counts when available; null means unavailable. A fork samples its own continuation, not proof of how an earlier parent request was routed.
+The baseline preserves Codex's persisted history, not unseen in-flight memory. A mid-turn fork can contain Codex's interruption marker. Probe arrays stay outside the parent task; its existing messages remain unchanged. English wording and a fixed prefix do not guarantee an invisible test or a cache hit. Report returned cached-token counts when available; null means unavailable. A fork samples its own continuation, not proof of how an earlier parent request was routed.
 
 On a runner error, report the recorded coverage gap and the returned diagnostic code/stage when available. A queued follow-up is not a successful check. Do not fabricate a result or fall back to in-context generation. At most one checkpoint runs per task. Probe failures, expiry, compaction, changed comparison conditions and interruptions do not count as mismatches.
 
@@ -63,4 +63,4 @@ When asked for the dashboard, run `dashboard` and open the returned local URL. I
 
 `stop` cancels future sampling for this task, interrupts retries and preserves history and any halt. `dashboard-stop` stops only the web service. The web service is not required for hook monitoring. Cleanup of temporary native baselines is tracked separately; report pending/blocked deletion, never describe archiving as deletion. Do not delete unrelated tasks to fix cleanup.
 
-See `../../README.md` for GitHub installation, cleanup diagnostics, storage and offline evaluation details. The bank is a packaged snapshot; do not collect or expand fingerprints unless the user separately requests it. Synthetic tests and score parity are not independent long-context/multilingual calibration.
+See `../../README.md` for GitHub installation, cleanup diagnostics, storage and offline evaluation details. The bank is a packaged snapshot; do not collect or expand fingerprints unless the user separately requests it. Synthetic tests and score parity are not independent long-context/English-prompt calibration.

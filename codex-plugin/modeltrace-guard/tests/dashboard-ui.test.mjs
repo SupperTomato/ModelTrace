@@ -40,7 +40,7 @@ async function fixture() {
       calls.push({ route, options });
       let result;
       if (route === '/api/info') result = { modelCount: 33, bankSha256: 'synthetic-hash' };
-      else if (route === '/api/sessions') result = { sessions: [{ id: state.id, session: state.session, displayName: '合成交互测试', expectedModel: state.expectedModel, enabled: state.enabled }], unreadable: 0 };
+      else if (route === '/api/sessions') result = { sessions: [{ id: state.id, session: state.session, displayName: 'Synthetic interaction test', expectedModel: state.expectedModel, enabled: state.enabled }], unreadable: 0 };
       else if (route.endsWith('/configure')) result = { ...state, frequency: { ...state.frequency, ...JSON.parse(options.body) } };
       else result = state;
       return { ok: true, json: async () => result };
@@ -56,29 +56,29 @@ test('shipped dashboard loads retry default and renders active, completed, inter
   const { context, nodes, inputs, state } = await fixture();
   assert.equal(inputs.find((input) => input.name === 'retryCount').value, 3);
   assert.equal(nodes['confirmation-panel'].hidden, false);
-  assert.equal(nodes['confirmation-status'].textContent, '复测 0 / 3');
+  assert.equal(nodes['confirmation-status'].textContent, 'Retries 0 / 3');
   state.pendingNotifications = 1;
   context.renderConfirmation(state);
-  assert.match(nodes['confirmation-note'].textContent, /等待智能体告知用户并确认提醒/);
+  assert.match(nodes['confirmation-note'].textContent, /Waiting for the agent to notify the user and acknowledge the alert/);
   state.pendingNotifications = 0;
   context.renderConfirmation(state);
-  assert.match(nodes['confirmation-note'].textContent, /等待下一次后台复测/);
+  assert.match(nodes['confirmation-note'].textContent, /Waiting for the next background retry/);
   state.frequency.retryCount = 7; state.confirmation.results = [{ mismatch: true }, { mismatch: false }];
   context.renderConfirmation(state);
-  assert.equal(nodes['confirmation-status'].textContent, '复测 2 / 3');
-  assert.match(nodes['confirmation-note'].textContent, /当前次数设置 7 仅影响下一组/);
+  assert.equal(nodes['confirmation-status'].textContent, 'Retries 2 / 3');
+  assert.match(nodes['confirmation-note'].textContent, /current retry count \(7\) applies to the next batch only/);
   state.confirmation.status = 'completed'; state.confirmation.allMismatch = false;
   context.renderConfirmation(state);
-  assert.match(nodes['confirmation-note'].textContent, /未满足全部不一致/);
+  assert.match(nodes['confirmation-note'].textContent, /the condition requiring all retries to mismatch was not met/);
   state.confirmation.status = 'interrupted'; state.confirmation.reason = 'context_compaction';
   context.renderConfirmation(state);
-  assert.match(nodes['confirmation-note'].textContent, /上下文压缩/);
+  assert.match(nodes['confirmation-note'].textContent, /Context compacted/);
   state.taskHalt = { expected: 'expected', retryCount: 3 };
   state.status = 'task_halted';
   context.render(state);
-  assert.equal(nodes.runtime.textContent, '已要求停止任务');
-  assert.equal(nodes['confirmation-status'].textContent, '已要求停止任务');
-  assert.match(nodes['confirmation-note'].textContent, /确认提醒、修改设置或停止监测不会解除/);
+  assert.equal(nodes.runtime.textContent, 'Task stop required');
+  assert.equal(nodes['confirmation-status'].textContent, 'Task stop required');
+  assert.match(nodes['confirmation-note'].textContent, /Acknowledging alerts, changing settings, or stopping monitoring does not lift /);
   state.taskHalt = state.confirmation = null;
   context.renderConfirmation(state);
   assert.equal(nodes['confirmation-panel'].hidden, true);
@@ -96,12 +96,12 @@ test('actual form submits configurable retry counts and tool intervals without t
   assert.deepEqual(body.languages, ['en']);
   assert.equal(body.pendingSeconds, 180);
   for (const key of ['mode', 'secondsMin', 'secondsMax', 'maxPerTurn', 'maxPerSession']) assert.equal(body[key], undefined);
-  assert.match(nodes['save-message'].textContent, /已保存/);
+  assert.match(nodes['save-message'].textContent, /Saved/);
   const requestCount = calls.length;
   for (const invalid of ['0', '101', '2.5']) {
     inputs.find((input) => input.name === 'retryCount').value = invalid;
     await nodes['config-form'].events.submit({ preventDefault() {} });
-    assert.match(nodes['save-message'].textContent, /异常复测次数需为/);
+    assert.match(nodes['save-message'].textContent, /Mismatch retry count must be /);
   }
   assert.equal(calls.length, requestCount, 'invalid retry settings do not reach the API');
 });
@@ -109,20 +109,20 @@ test('actual form submits configurable retry counts and tool intervals without t
 test('dashboard distinguishes a queued probe, a live background worker and no pending work', async () => {
   const { context, nodes, state } = await fixture();
   state.pending = { id: 'queued-checkpoint' }; state.background = { running: false };
-  context.render(state); assert.match(nodes['sample-note'].textContent, /已排队/);
+  context.render(state); assert.match(nodes['sample-note'].textContent, /Queued/);
   state.background.running = true;
-  context.render(state); assert.match(nodes['sample-note'].textContent, /正在检测/);
+  context.render(state); assert.match(nodes['sample-note'].textContent, /Checking/);
   state.pending = null; state.background.running = false;
-  context.render(state); assert.match(nodes['sample-note'].textContent, /无在途探针/);
+  context.render(state); assert.match(nodes['sample-note'].textContent, /No probe in flight/);
 });
 
 test('task selector distinguishes enabled monitoring from stopped historical records', async () => {
   const { context, nodes, state } = await fixture();
-  assert.match(nodes.session.children[0].textContent, /^已开启 · 合成交互测试/);
+  assert.match(nodes.session.children[0].textContent, /^Enabled · Synthetic interaction test/);
   state.enabled = false; state.status = 'disabled';
   await context.refresh();
-  assert.match(nodes.session.children[0].textContent, /^已停止 · 历史记录 · 合成交互测试/);
-  assert.equal(nodes.runtime.textContent, '已停止监测');
+  assert.match(nodes.session.children[0].textContent, /^Stopped · History · Synthetic interaction test/);
+  assert.equal(nodes.runtime.textContent, 'Monitoring stopped');
 });
 
 test('dashboard shows a typed sampling failure separately from a model mismatch', async () => {
@@ -131,10 +131,10 @@ test('dashboard shows a typed sampling failure separately from a model mismatch'
   state.mismatchAlerts = 0; state.missedProbes = 1;
   state.forkHealth = { ready: false, error: 'Probe answer is not one valid JSON array', diagnostic: { stage: 'submission', code: 'invalid_json' } };
   context.render(state);
-  assert.equal(nodes.runtime.textContent, '覆盖缺口');
+  assert.equal(nodes.runtime.textContent, 'Coverage gaps');
   assert.equal(nodes.mismatches.textContent, 0);
   assert.equal(nodes.missed.textContent, 1);
-  assert.match(nodes['fork-note'].textContent, /检测未完成.*submission \/ invalid_json/);
+  assert.match(nodes['fork-note'].textContent, /Check incomplete.*submission \/ invalid_json/);
   state.forkHealth = { ready: true };
   context.render(state);
   assert.ok(!nodes['fork-note'].textContent.includes('invalid_json'));

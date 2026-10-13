@@ -28,25 +28,25 @@ ENGLISH_ALTERNATIVES = (
     "Return exactly {count} integers bounded by 1 and 355, deciding each next value separately rather than following a rule.",
 )
 
-CHINESE_TEMPLATES = (
-    "这是一次无语义数值选择。请为 {count} 个位置分别凭第一反应选择一个 1 到 355（含端点）的整数。",
-    "请完成无语义整数选择任务：逐项给出 {count} 个闭区间 [1, 355] 内的整数，每次只决定当前一项。",
-    "进行一轮快速逐项取值：分别给出 {count} 个取值范围为 1 至 355 的整数。",
+ADDITIONAL_ENGLISH_TEMPLATES = (
+    "This is a numerical-choice task without semantic meaning. For each of {count} positions, separately choose an integer from 1 through 355, inclusive, on your first instinct.",
+    "Complete a numerical-choice task without semantic meaning: provide {count} integers from the closed interval [1, 355], deciding only the current item each time.",
+    "Make a series of immediate choices, one item at a time: separately provide {count} integers from 1 through 355.",
 )
 
 ENVIRONMENTS = (
     {"transport": "clean", "style": "json", "counts": (218, 233, 247), "templates": ENGLISH_TEMPLATES},
     {"transport": "clean", "style": "json", "counts": (223, 239, 251), "templates": ENGLISH_ALTERNATIVES},
     {"transport": "system", "style": "json", "counts": (227, 241, 257), "templates": ENGLISH_TEMPLATES, "fixed_prefix": FIXED_SYSTEM_PREFIX},
-    {"transport": "clean", "style": "zh", "counts": (294, 311, 329), "templates": CHINESE_TEMPLATES},
+    {"transport": "clean", "style": "en", "counts": (294, 311, 329), "templates": ADDITIONAL_ENGLISH_TEMPLATES},
     {"transport": "clean", "style": "en", "counts": (297, 315, 331), "templates": ENGLISH_TEMPLATES},
     {"transport": "clean", "style": "json", "counts": (301, 319, 327), "templates": ENGLISH_TEMPLATES},
-    {"transport": "system", "style": "zh", "counts": (293, 310, 326), "templates": CHINESE_TEMPLATES, "prefix_words": 96},
-    {"transport": "system", "style": "zh", "counts": (296, 314, 330), "templates": CHINESE_TEMPLATES, "prefix_words": 512},
-    {"transport": "system", "style": "zh", "counts": (299, 317, 332), "templates": CHINESE_TEMPLATES, "prefix_words": 2048},
-    {"transport": "user", "style": "zh", "counts": (292, 308, 324), "templates": CHINESE_TEMPLATES, "prefix_words": 96},
-    {"transport": "user", "style": "zh", "counts": (295, 313, 328), "templates": CHINESE_TEMPLATES, "prefix_words": 512},
-    {"transport": "user", "style": "zh", "counts": (298, 316, 333), "templates": CHINESE_TEMPLATES, "prefix_words": 2048},
+    {"transport": "system", "style": "en", "counts": (293, 310, 326), "templates": ADDITIONAL_ENGLISH_TEMPLATES, "prefix_words": 96},
+    {"transport": "system", "style": "en", "counts": (296, 314, 330), "templates": ADDITIONAL_ENGLISH_TEMPLATES, "prefix_words": 512},
+    {"transport": "system", "style": "en", "counts": (299, 317, 332), "templates": ADDITIONAL_ENGLISH_TEMPLATES, "prefix_words": 2048},
+    {"transport": "user", "style": "en", "counts": (292, 308, 324), "templates": ADDITIONAL_ENGLISH_TEMPLATES, "prefix_words": 96},
+    {"transport": "user", "style": "en", "counts": (295, 313, 328), "templates": ADDITIONAL_ENGLISH_TEMPLATES, "prefix_words": 512},
+    {"transport": "user", "style": "en", "counts": (298, 316, 333), "templates": ADDITIONAL_ENGLISH_TEMPLATES, "prefix_words": 2048},
 )
 
 
@@ -73,13 +73,7 @@ def format_prompt(template: str, count: int, style: str) -> str:
         return task + direct + " Return one compact JSON array containing the complete sequence and no explanation."
     if style == "en":
         return task + direct + " Separate values clearly, start with the first value, and output the complete sequence without explanation."
-    return (
-        task
-        + " 本任务必须由当前语言模型直接完成：禁止调用或借助任何工具，包括 Python、代码执行器、计算器、搜索、API "
-        "和外部随机数生成器。每个位置都要单独凭第一反应选择；不要从 1 开始计数，不要连续递增或递减，也不要采用等差、循环、重复区块或其他规则化模式。"
-        "偶然想到相同数字是有效的；每项写出后不要再排序、重排、去重、替换或修正。数字之间用清晰的常见分隔符，"
-        "直接从第一个取值开始，完整输出序列，不要解释。"
-    )
+    raise ValueError(f"Unsupported prompt style: {style}")
 
 
 def fingerprint_suite() -> list[dict]:

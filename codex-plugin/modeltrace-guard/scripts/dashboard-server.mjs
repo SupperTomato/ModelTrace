@@ -20,15 +20,15 @@ const fail = (status, message) => Object.assign(new Error(message), { status });
 const stateCache = new Map();
 
 async function stateById(directory, id) {
-  if (!/^[a-f0-9]{64}$/.test(id)) throw fail(404, '未找到监测任务');
+  if (!/^[a-f0-9]{64}$/.test(id)) throw fail(404, 'Monitored task not found');
   const file = path.join(directory, `${id}.json`);
-  const info = await lstat(file).catch((error) => { if (error.code === 'ENOENT') throw fail(404, '未找到监测任务'); throw error; });
-  if (!info.isFile()) throw fail(422, '状态文件无效');
+  const info = await lstat(file).catch((error) => { if (error.code === 'ENOENT') throw fail(404, 'Monitored task not found'); throw error; });
+  if (!info.isFile()) throw fail(422, 'Invalid state file');
   const signature = `${info.ino}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
   const cached = stateCache.get(file);
   if (cached?.signature === signature) return cached.state;
   const state = JSON.parse(await readFile(file, 'utf8'));
-  if (![1, 2].includes(state.schema) || typeof state.session !== 'string' || digest(state.session) !== id || !Array.isArray(state.samples) || !Array.isArray(state.events)) throw fail(422, '监测状态格式无效；历史未被重置');
+  if (![1, 2].includes(state.schema) || typeof state.session !== 'string' || digest(state.session) !== id || !Array.isArray(state.samples) || !Array.isArray(state.events)) throw fail(422, 'Invalid monitoring state format; history was not reset');
   validateConfig({}, state.config);
   if (stateCache.size >= 256) stateCache.delete(stateCache.keys().next().value);
   stateCache.set(file, { signature, state });
@@ -42,7 +42,7 @@ export function dashboardSnapshot(state, directory) {
     samples: state.samples.slice(-1000).map(publicSample),
     alerts: (state.alerts || []).slice(-128), events: state.events.slice(-512), eventCount: historyCount(state, 'events'),
     historyTotals: { samples: historyCount(state, 'samples'), events: historyCount(state, 'events'), alerts: historyCount(state, 'alerts') },
-    notificationMeaning: '已告知是智能体的自报确认，不等于独立验证用户已收到。',
+    notificationMeaning: 'Notification acknowledgment is the agent\'s self-report; it does not independently verify that the user received the message.',
   };
 }
 
@@ -63,18 +63,18 @@ async function listSessions(directory) {
 }
 
 async function jsonBody(req) {
-  if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) throw fail(415, '仅接受 JSON');
+  if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) throw fail(415, 'Use application/json for the request body.');
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 8192) throw fail(413, '请求过大');
+    if (size > 8192) throw fail(413, 'Request too large');
     chunks.push(chunk);
   }
   let body;
   try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-  catch { throw fail(400, 'JSON 格式无效'); }
-  if (!body || Array.isArray(body) || typeof body !== 'object') throw fail(400, '需要 JSON 对象');
+  catch { throw fail(400, 'Invalid JSON. Submit one JSON object.'); }
+  if (!body || Array.isArray(body) || typeof body !== 'object') throw fail(400, 'The request body must be a JSON object.');
   return body;
 }
 
@@ -103,9 +103,9 @@ export async function createDashboard({ directory, token = randomBytes(32).toStr
     try {
       // A loopback bind alone does not prevent DNS rebinding or hostile websites
       // from reaching local APIs. Use an exact Host, capability and write Origin.
-      if (req.headers.host !== new URL(origin).host) throw fail(403, 'Host 不允许');
-      if (req.headers.origin && req.headers.origin !== origin) throw fail(403, 'Origin 不允许');
-      if (req.headers['sec-fetch-site'] === 'cross-site') throw fail(403, '不接受跨站请求');
+      if (req.headers.host !== new URL(origin).host) throw fail(403, 'Host is not allowed');
+      if (req.headers.origin && req.headers.origin !== origin) throw fail(403, 'Origin is not allowed');
+      if (req.headers['sec-fetch-site'] === 'cross-site') throw fail(403, 'Cross-site requests are not accepted');
       const url = new URL(req.url, origin);
       if (req.method === 'GET' && assets.has(url.pathname)) {
         const { bytes, type } = assets.get(url.pathname);
@@ -113,10 +113,10 @@ export async function createDashboard({ directory, token = randomBytes(32).toStr
         res.end(bytes);
         return;
       }
-      if (!url.pathname.startsWith('/api/')) throw fail(404, '未找到页面');
+      if (!url.pathname.startsWith('/api/')) throw fail(404, 'Page not found');
       const supplied = Buffer.from(req.headers.authorization || '');
       const expected = Buffer.from(`Bearer ${token}`);
-      if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) throw fail(401, '访问凭证缺失或已失效，请让智能体重新打开仪表盘');
+      if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) throw fail(401, 'Access credential missing or expired; ask the agent to reopen the dashboard');
       if (req.method === 'GET' && url.pathname === '/api/health') return json(200, { service: SERVICE, directoryHash: digest(directory), pid: process.pid });
       if (req.method === 'GET' && url.pathname === '/api/info') return json(200, info);
       if (req.method === 'GET' && url.pathname === '/api/sessions') return json(200, await listSessions(directory));
@@ -147,17 +147,17 @@ export async function createDashboard({ directory, token = randomBytes(32).toStr
         res.once('close', () => { clearInterval(interval); streams.delete(res); });
         void sendAlerts(); return;
       }
-      if (!['GET', 'POST'].includes(req.method)) throw fail(405, '方法不允许');
-      if (req.method === 'POST' && req.headers.origin !== origin) throw fail(403, '写入需要同源 Origin');
+      if (!['GET', 'POST'].includes(req.method)) throw fail(405, 'Method not allowed');
+      if (req.method === 'POST' && req.headers.origin !== origin) throw fail(403, 'Writes require a matching Origin header.');
       if (req.method === 'POST' && url.pathname === '/api/shutdown') {
         const body = await jsonBody(req);
-        if (Object.keys(body).length) throw fail(400, '停止服务不接受额外参数');
+        if (Object.keys(body).length) throw fail(400, 'Stopping the server accepts no extra arguments');
         json(200, { stopped: true });
         setImmediate(() => { void close().then(() => onShutdown?.()); });
         return;
       }
       const match = url.pathname.match(/^\/api\/sessions\/([a-f0-9]{64})(?:\/(configure|stop|name|history))?$/);
-      if (!match) throw fail(404, '未找到接口');
+      if (!match) throw fail(404, 'Endpoint not found');
       const state = await stateById(directory, match[1]);
       if (req.method === 'GET' && match[2] === 'history') {
         const kind = url.searchParams.get('kind') || 'samples';
@@ -165,18 +165,18 @@ export async function createDashboard({ directory, token = randomBytes(32).toStr
           const page = await historyPage(directory, state, kind, { before: url.searchParams.has('before') ? url.searchParams.get('before') : undefined, limit: url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : 100 });
           if (kind === 'samples') page.rows = page.rows.map(publicSample);
           return json(200, { kind, ...page });
-        } catch (error) { if (/Invalid history (page|cursor)/.test(error.message)) throw fail(400, '分页参数无效'); throw error; }
+        } catch (error) { if (/Invalid history (page|cursor)/.test(error.message)) throw fail(400, 'Invalid pagination parameters'); throw error; }
       }
       if (req.method === 'GET' && !match[2]) return json(200, dashboardSnapshot(state, directory));
-      if (match[2] === 'history') throw fail(405, '历史记录只读');
-      if (req.method !== 'POST' || !match[2]) throw fail(405, '方法不允许');
+      if (match[2] === 'history') throw fail(405, 'Read-only history');
+      if (req.method !== 'POST' || !match[2]) throw fail(405, 'Method not allowed');
       const body = await jsonBody(req);
-      if (match[2] === 'stop' && Object.keys(body).length) throw fail(400, '停止监测不接受额外参数');
-      if (match[2] === 'name' && (Object.keys(body).length !== 1 || !Object.hasOwn(body, 'name'))) throw fail(400, '修改显示名称仅接受 name 字段');
+      if (match[2] === 'stop' && Object.keys(body).length) throw fail(400, 'Stopping monitoring accepts no extra arguments');
+      if (match[2] === 'name' && (Object.keys(body).length !== 1 || !Object.hasOwn(body, 'name'))) throw fail(400, 'Changing the display name accepts only the name field.');
       const result = await withState(directory, state.session, (live) => {
         const now = Date.now();
         if (match[2] === 'configure') {
-          if (!live.enabled) throw fail(409, '监测未开启，请在目标 Codex 任务中开启');
+          if (!live.enabled) throw fail(409, 'Monitoring is not enabled. Enable it in the target Codex task first.');
           try { live.config = validateConfig(body, live.config); }
           catch (error) { throw fail(400, error.message); }
           schedule(live, now);
@@ -194,7 +194,7 @@ export async function createDashboard({ directory, token = randomBytes(32).toStr
       });
       json(200, result);
     } catch (error) {
-      if (!res.headersSent) json(error.status || 500, { error: error.status ? error.message : '读取或保存本地状态失败；历史未被重置。请检查 guard status。' });
+      if (!res.headersSent) json(error.status || 500, { error: error.status ? error.message : 'Failed to read or save local state; history was not reset. Inspect guard status.' });
       else res.end();
     }
   });

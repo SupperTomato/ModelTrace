@@ -7,10 +7,12 @@ import path from 'node:path';
 import { loadArtifacts } from './modeltrace-guard/scripts/guard.mjs';
 
 const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const rows = (await readFile(path.join(repo, 'data', 'gpt_reference.jsonl'), 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
+const rows = (await Promise.all(['gpt', 'claude'].map(async (family) =>
+  (await readFile(path.join(repo, 'data', `${family}_reference.jsonl`), 'utf8')).trim().split('\n').map((line) => JSON.parse(line)),
+))).flat();
 const { bank, analyzeGlobalOutputs } = await loadArtifacts();
-const models = bank.models.filter((model) => model.family === 'gpt').map((model) => model.id);
-assert.ok(models.length > 0, 'Packaged bank has no GPT models');
+const models = bank.models.map((model) => model.id);
+assert.ok(models.length > 0, 'Packaged bank has no models');
 const cases = models.flatMap((model) => {
   const selected = rows.filter((row) => row.model_id === model && row.strict_valid).slice(0, 3);
   assert.equal(selected.length, 3, `Missing saved references for ${model}`);
@@ -32,4 +34,4 @@ for (const [index, item] of cases.entries()) {
     assert.ok(error < 1e-10, `${item.model}: ${error}`);
   }
 }
-process.stdout.write(JSON.stringify({ cases: cases.length, passed: true, largestProbabilityDifference: largestError, note: 'Saved-reference scorer parity only, not same-context or multilingual detection calibration.' }) + '\n');
+process.stdout.write(JSON.stringify({ cases: cases.length, passed: true, largestProbabilityDifference: largestError, note: 'Saved-reference scorer parity only, not same-context or English-prompt detection calibration.' }) + '\n');

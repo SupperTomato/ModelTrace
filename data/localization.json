@@ -1,0 +1,24 @@
+{
+  "source_repository": "https://github.com/xqy2006/ModelTrace",
+  "source_revision": "6cd4a8ff0f3f4e49d6d6969dd2fbadfa1569fde2",
+  "notes": "Historical non-English prompt metadata and response explanations are English translations, not newly collected English samples. Numeric sequences and fitted banks are preserved. New English probes have not been independently recalibrated. Original fields remain available at the source revision.",
+  "bank_sha256": {
+    "gpt_bank.json": "94229c6601429c916011b1ce45ac1a87d6ad0d6914368038d0d069effe7201a1",
+    "claude_bank.json": "f62260d976199b5b0b1a650a72c170102313aa3964f295e7a6dd81cfaaa8aff9",
+    "unified_bank.json": "f267d0513aa06981d024ec5394746fceddf44e4e8a75fa6bf8304255f4b32d6d"
+  },
+  "references": {
+    "gpt_reference.jsonl": {
+      "source_sha256": "b87e5630286308fdcec0893b89873635bf274b64a5269f41039eb46e66d3793f",
+      "row_count": 288,
+      "translated_fields": 340,
+      "parsed_sequences_sha256": "779a6972c19ecc1dcb06861ff9e47cd85c86044ef0cc4d8f02321ed14914e20f"
+    },
+    "claude_reference.jsonl": {
+      "source_sha256": "13e5a9b266fefb96282e9857a53e3b408146dade66ca6220fa593fdff270d8a8",
+      "row_count": 360,
+      "translated_fields": 422,
+      "parsed_sequences_sha256": "38466f507e5689bbfebee9dac8aa8f8728dccaa378e54785b661aa8a99b6159b"
+    }
+  }
+}

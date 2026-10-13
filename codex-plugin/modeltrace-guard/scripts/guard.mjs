@@ -274,7 +274,7 @@ export async function run(args, env = process.env, receipt = null) {
     retries: '--retry-count N (1..100, default 3): consecutive follow-ups after an initial mismatch; all N mismatches request task halt',
     resume: 'resume --halt <halt id> only after the user explicitly asks to resume task work',
     probeLimits: 'No per-turn or task-total probe limits; sampling remains subject to tool intervals, one live checkpoint and explicit stop/halt',
-    languages: LANGUAGES, languageOption: '--languages zh,en,ja,ko,fr,de,es,pt,ru,ar (random per checkpoint; one code = fixed)',
+    languages: LANGUAGES, languageOption: '--languages en (English only; historical language codes migrate to English)',
     defaults: DEFAULTS, warning: WARNING,
   };
   if (command === 'doctor' || command === 'models') {

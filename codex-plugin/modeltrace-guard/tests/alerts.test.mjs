@@ -23,7 +23,7 @@ test('known-label mismatches alert at weak and strong levels; unknown labels nev
   assert.equal(queueAlert(s, sample()).level, 'difference_signal');
   assert.equal(queueAlert(s, sample()).id, 'synthetic-alert-1'); assert.equal(s.alerts.length, 1);
   const weak = queueAlert(s, sample({ challenge: 'weak', outcome: 'inconclusive', closedSetWeight: .4, expectedWeight: .3 }));
-  assert.equal(weak.level, 'candidate_mismatch'); assert.ok(userNotice(weak).includes('证据不足'));
+  assert.equal(weak.level, 'candidate_mismatch'); assert.ok(userNotice(weak).includes('Insufficient evidence'));
   assert.equal(queueAlert(s, sample({ expectedWeight: null, outcome: 'unknown_expected_model' })), null);
   assert.equal(queueAlert(s, sample({ prediction: 'gpt-5.4', outcome: 'compatible' })), null);
   assert.equal(s.alerts.length, 2);
@@ -70,7 +70,7 @@ test('Stop gives at most one notification continuation, with a visible fallback 
   const first = await handleHook(event('Stop'), dir, 1001);
   assert.equal(first.decision, 'block'); assert.ok(first.reason.includes('NOTIFY THE USER NOW'));
   const second = await handleHook(event('Stop', { stop_hook_active: true }), dir, 1002);
-  assert.equal(second.decision, undefined); assert.ok(second.systemMessage.includes('ModelTrace Guard 提醒'));
+  assert.equal(second.decision, undefined); assert.ok(second.systemMessage.includes('ModelTrace Guard Alerts'));
   const third = await handleHook(event('Stop'), dir, 1003); assert.equal(third.decision, undefined);
   assert.equal(pendingAlerts(await readState(dir, session)).length, 1);
 });

@@ -21,10 +21,10 @@ function transport(t, options) {
 test('protocol frames handle split UTF-8, CRLF, multiple messages and a final unterminated frame', async (t) => {
   const { client, child } = transport(t);
   const first = client.request('thread/read'), second = client.request('thread/turns/list');
-  const frame = Buffer.from('\r\n' + JSON.stringify({ id: 1, result: { text: '上下文 ✓' } }) + '\r\n' + JSON.stringify({ id: 2, result: { data: [] } }));
+  const frame = Buffer.from('\r\n' + JSON.stringify({ id: 1, result: { text: 'context ✓' } }) + '\r\n' + JSON.stringify({ id: 2, result: { data: [] } }));
   for (const byte of frame) child.stdout.write(Buffer.from([byte]));
   child.stdout.end();
-  assert.deepEqual(await first, { text: '上下文 ✓' });
+  assert.deepEqual(await first, { text: 'context ✓' });
   assert.deepEqual(await second, { data: [] });
   assert.equal(child.kills, 0);
 });

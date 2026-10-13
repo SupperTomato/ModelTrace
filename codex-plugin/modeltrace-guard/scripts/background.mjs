@@ -67,7 +67,7 @@ export async function handleBackgroundHook(event, directory, env = process.env, 
     if (result.skipped || result.cancelled) break;
     if (!result.accepted) return injected(event.hook_event_name,
       `ModelTrace Guard: the background checkpoint failed. Tell the user about this monitoring gap, not a model mismatch. Do not generate probe numbers in the main task. Reason: ${JSON.stringify(result.reason)}${result.diagnostic ? ` Diagnostics: ${JSON.stringify(result.diagnostic)}` : ''}`,
-      'ModelTrace Guard: 后台检测未完成，请查看状态。');
+      'ModelTrace Guard: Background check incomplete; inspect status.');
     if (result.notification || result.taskHalt) break;
     // Normal matches are completely silent. Only an existing confirmation may
     // advance directly to its next retry, still using the same frozen baseline.

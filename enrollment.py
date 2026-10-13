@@ -22,8 +22,8 @@ PROJECT = Path(__file__).resolve().parent
 DATA_FILE = PROJECT / "data" / "gpt_reference.jsonl"
 BANK_FILE = PROJECT / "data" / "gpt_bank.json"
 
-# urllib 默认的 Python-urllib User-Agent 会被 Cloudflare/WAF 网关直接拦成 403，
-# 因此伪装成真实客户端（与 gpt56 检测器使用的 UA 一致）。
+# Gateways using Cloudflare or a WAF may reject the default Python-urllib User-Agent with HTTP 403.
+# Use the same client User-Agent as the gpt56 detector for compatibility.
 DEFAULT_UPSTREAM_USER_AGENT = (
     "Codex Desktop/0.147.0-alpha.1.2 (Windows 10.0.26200; x86_64) unknown "
     "(codex_exec; 0.147.0-alpha.1.2)"
@@ -180,12 +180,12 @@ def _looks_like_waf_block(text: str) -> bool:
 def _compact_upstream_error(details: str, fallback: str) -> str:
     text = (details or fallback or "").strip()
     if not text:
-        return "上游接口返回错误"
+        return "The upstream API returned an error"
     if _looks_like_waf_block(text):
         return (
-            "请求被上游网关拦截（Cloudflare/WAF 拦截页）。"
-            "请确认 base_url 指向 API 端点而非网页地址、API Key 有效，"
-            "或该服务是否限制当前网络/IP"
+            "The upstream gateway blocked the request (Cloudflare/WAF block page). "
+            "Check that base_url points to an API endpoint and that your API key is valid, "
+            "and whether the service restricts your current network or IP address"
         )
     if text.startswith("<") or "{" not in text and "html" in text.lower():
         return text[:200]
@@ -256,7 +256,7 @@ def _request_completion(
         except urllib.error.HTTPError as error:
             details = error.read().decode("utf-8", errors="replace").strip()
             message = _compact_upstream_error(details, error.reason)
-            retried = f"（已自动重试 {attempt - 1} 次）" if attempt > 1 else ""
+            retried = f" (automatically retried {attempt - 1} times)" if attempt > 1 else ""
             if attempt < MAX_ATTEMPTS and error.code in RETRYABLE_STATUS:
                 time.sleep(RETRY_BASE_DELAY * attempt + random.uniform(0, 0.5))
                 continue
@@ -266,8 +266,8 @@ def _request_completion(
             if attempt < MAX_ATTEMPTS:
                 time.sleep(RETRY_BASE_DELAY * attempt + random.uniform(0, 0.5))
                 continue
-            retried = f"（已自动重试 {attempt - 1} 次）" if attempt > 1 else ""
-            raise RuntimeError(f"无法连接接口：{reason}{retried}") from error
+            retried = f" (automatically retried {attempt - 1} times)" if attempt > 1 else ""
+            raise RuntimeError(f"Could not connect to the API: {reason}{retried}") from error
     if api_format == "anthropic":
         content = "".join(
             block.get("text", "")
@@ -276,16 +276,16 @@ def _request_completion(
         )
         stop_reason = payload.get("stop_reason")
         if stop_reason == "refusal":
-            raise RuntimeError("模型拒绝生成，本次回答不计入")
+            raise RuntimeError("The model refused to generate; this response is excluded")
         if stop_reason == "max_tokens":
-            raise RuntimeError("回答因 max_tokens 截断，本次回答不计入")
+            raise RuntimeError("The response was truncated by max_tokens and is excluded")
     else:
         choice = payload["choices"][0]
         content = choice["message"]["content"]
         if isinstance(content, list):
             content = "".join(part.get("text", "") for part in content)
         if choice.get("finish_reason") in {"length", "content_filter"}:
-            raise RuntimeError(f"回答未正常完成（{choice['finish_reason']}），本次回答不计入")
+            raise RuntimeError(f"The response did not complete normally ({choice['finish_reason']}); this response is excluded")
     return str(content)
 
 
@@ -311,7 +311,7 @@ def request_completion(
             )
         except RuntimeError as error:
             errors.append(f"{candidate}: {error}")
-    raise RuntimeError("接口格式自动探测失败；" + "；".join(errors))
+    raise RuntimeError("Automatic API format detection failed; " + "; ".join(errors))
 
 
 def test_automatic(
@@ -347,7 +347,7 @@ def test_automatic(
                     }
                 )
             else:
-                errors.append(f"有效数字不足：{parsed_count}/{minimum}")
+                errors.append(f"Not enough valid numbers: {parsed_count}/{minimum}")
         except Exception as error:
             errors.append(str(error))
         if len(outputs) == target_count:
@@ -378,7 +378,7 @@ def enroll_automatic(
 ) -> dict:
     suite = fingerprint_suite()
     if sample_count < 3 or sample_count > len(suite):
-        raise ValueError(f"采集回答数必须在 3 到 {len(suite)} 之间")
+        raise ValueError(f"The response count must be between 3 and {len(suite)}")
     selected = [suite[int(index * len(suite) / sample_count)] for index in range(sample_count)]
     rows = []
     errors = []
@@ -419,7 +419,7 @@ def enroll_automatic(
                 if row["strict_valid"]:
                     return row, task_errors
                 task_errors.append(
-                    f"{task['challenge_id']} 有效数字不足：{row['parsed_count']}/{row['strict_threshold']}"
+                    f"{task['challenge_id']} Not enough valid numbers: {row['parsed_count']}/{row['strict_threshold']}"
                 )
             except Exception as error:
                 task_errors.append(f"{task['challenge_id']}: {error}")
@@ -434,7 +434,7 @@ def enroll_automatic(
                 rows.append(row)
     accepted = [row for row in rows if row["strict_valid"]]
     if not accepted:
-        raise ValueError("没有获得可用回答，指纹库未修改")
+        raise ValueError("No usable responses were received; the fingerprint bank was not changed")
     append_rows(accepted, data_file)
     bank = rebuild_bank(data_file, bank_file)
     return {

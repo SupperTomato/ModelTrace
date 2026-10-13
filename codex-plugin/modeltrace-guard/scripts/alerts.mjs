@@ -22,9 +22,9 @@ export function queueAlert(state, sample) {
 export const pendingAlerts = (state) => (state?.alerts || []).filter((alert) => !alert.acknowledgedAt);
 
 export function userNotice(alert) {
-  if (alert.level === 'confirmed_mismatch') return `ModelTrace Guard：首次异常后的 ${alert.retryCount} 次复测全部与预期模型 ${JSON.stringify(alert.expected)} 不一致。复测第一候选依次为 ${JSON.stringify(alert.predictions || [alert.prediction])}。已要求智能体立刻停止原任务并告知用户，等待用户决定后续操作。`;
-  const strength = { candidate_mismatch: '候选排序不一致，但证据不足', difference_signal: '一次较强的指纹差异线索', repeated_difference: '近期重复的同语言指纹差异线索' }[alert.level];
-  return `ModelTrace Guard 提醒：${new Date(alert.at).toISOString()} 的抽样中，预期模型为 ${JSON.stringify(alert.expected)}，指纹第一候选为 ${JSON.stringify(alert.prediction)}（${strength}）。这是未独立校准的实验性结果，不能据此确认模型被替换、降智或厂商作弊；后续匹配也不会抹去本次记录。`;
+  if (alert.level === 'confirmed_mismatch') return `ModelTrace Guard: all ${alert.retryCount} additional retries mismatched expected model ${JSON.stringify(alert.expected)}. Leading retry candidates: ${JSON.stringify(alert.predictions || [alert.prediction])}. The agent must immediately stop the original task, notify the user, and wait for a decision.`;
+  const strength = { candidate_mismatch: 'Insufficient evidence: candidate ranking differs', difference_signal: 'One stronger fingerprint difference signal', repeated_difference: 'Repeated recent fingerprint differences in the same language' }[alert.level];
+  return `ModelTrace Guard Alerts: ${new Date(alert.at).toISOString()}; expected ${JSON.stringify(alert.expected)}; leading fingerprint candidate ${JSON.stringify(alert.prediction)} (${strength}). These experimental results have not been independently calibrated and cannot confirm model replacement, reduced capability, or provider cheating. Later compatible samples do not erase this record.`;
 }
 
 export function acknowledgeAlerts(state, ids, now) {

@@ -1,18 +1,18 @@
 {
   "name": "modeltrace-guard",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Background Codex model fingerprint monitoring with disposable forks of a frozen task snapshot.",
   "author": {
     "name": "xqy2006"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "ModelTrace Guard",
-    "shortDescription": "后台探针 · 网页仪表盘 · 差异主动提醒",
-    "longDescription": "按工作工具调用次数，在后台从原任务冻结快照分别 fork 进行检测与复测，测后清理临时分支。正常结果静默保存，不等待探针即可继续原工作。使用 ModelTrace 离线指纹库；首次不一致主动提醒并暂停工作，默认额外复测 3 次（可配置），全部不一致时要求停止任务并拦截后续工作工具。提供网页仪表盘、历史分页和桌面提醒。探针使用 Codex 已配置的账户与模型并消耗推理额度。",
+    "displayName": "ModelTrace Guard (English)",
+    "shortDescription": "Background probe \u00b7 Web dashboard \u00b7 Proactive mismatch alerts",
+    "longDescription": "Monitor Codex task fingerprints with English probes in disposable forks of frozen task snapshots. Normal checks run silently in the background. A mismatch prompts notification and additional retries (default 3); if every retry mismatches, the task must stop and supported work tools are blocked. Includes a web dashboard, paginated history, and optional desktop alerts. Probes use the configured Codex account and model and consume inference quota. Scoring uses the bundled offline ModelTrace bank.",
     "developerName": "xqy2006",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "为当前任务开启 ModelTrace Guard，使用随机间隔采样，并告诉我如何调整探测频率。"
+    "defaultPrompt": "Enable ModelTrace Guard for this task with English probes and random sampling intervals, and explain how to adjust the frequency."
   }
 }
